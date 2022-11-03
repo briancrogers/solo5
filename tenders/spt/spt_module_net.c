@@ -41,13 +41,16 @@ static int handle_cmdarg(char *cmdarg, struct mft *mft)
 {
     enum {
         opt_net,
-        opt_net_mac
+        opt_net_mac,
+        opt_net_mtu
     } which;
 
     if (strncmp("--net:", cmdarg, 6) == 0)
         which = opt_net;
     else if (strncmp("--net-mac:", cmdarg, 10) == 0)
         which = opt_net_mac;
+    else if (strncmp("--net-mtu:", cmdarg, 10) == 0)
+        which = opt_net_mtu;
     else
         return -1;
 
@@ -75,7 +78,10 @@ static int handle_cmdarg(char *cmdarg, struct mft *mft)
         /* e->u.net_basic.mac[] is set either by option or generated later by
          * setup().
          */
-        e->u.net_basic.mtu = 1500; /* TODO */
+        /* e->u.net_basic.mtu is set either by option or set later to 1500 by
+         * setup().
+         */
+        //e->u.net_basic.mtu = 1500;
         e->b.hostfd = fd;
         e->attached = true;
         module_in_use = true;
@@ -98,6 +104,24 @@ static int handle_cmdarg(char *cmdarg, struct mft *mft)
         }
         memcpy(e->u.net_basic.mac, mac, sizeof mac);
     }
+    else if (which == opt_net_mtu) {
+        uint16_t mtu;
+        rc = sscanf(cmdarg,
+                "--net-mtu:%" XSTR(MFT_NAME_MAX) "[A-Za-z0-9]="
+                "%"SCNu16,
+                name,
+                &mtu);
+        if (rc != 2)
+            return -1;
+        struct mft_entry *e = mft_get_by_name(mft, name, MFT_DEV_NET_BASIC,
+                NULL);
+        if (e == NULL) {
+            warnx("Resource not declared in manifest: '%s'", name);
+            return -1;
+        }
+        //memcpy(e->u.net_basic.mac, mac, sizeof mac)	
+        e->u.net_basic.mtu = mtu;
+    }
 
     return 0;
 }
@@ -113,6 +137,8 @@ static int setup(struct spt *spt, struct mft *mft)
         char no_mac[6] = { 0 };
         if (memcmp(mft->e[i].u.net_basic.mac, no_mac, sizeof no_mac) == 0)
             tap_attach_genmac(mft->e[i].u.net_basic.mac);
+        if (mft->e[i].u.net_basic.mtu == 0)
+            mtu->e[i].u.net_basic.mtu = 1500;
 
         int rc;
         struct epoll_event ev;
@@ -145,7 +171,8 @@ static int setup(struct spt *spt, struct mft *mft)
 static char *usage(void)
 {
     return "--net:NAME=IFACE | @NN (attach tap at IFACE or at fd @NN as network NAME)\n"
-        "  [ --net-mac:NAME=HWADDR ] (set HWADDR for network NAME)";
+        "  [ --net-mac:NAME=HWADDR ] (set HWADDR for network NAME)\n";
+        "  [ --net-mtu:NAME=MTU ] (set MTU for network NAME)";
 }
 
 DECLARE_MODULE(net,
