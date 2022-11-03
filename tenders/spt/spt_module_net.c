@@ -138,7 +138,7 @@ static int setup(struct spt *spt, struct mft *mft)
         if (memcmp(mft->e[i].u.net_basic.mac, no_mac, sizeof no_mac) == 0)
             tap_attach_genmac(mft->e[i].u.net_basic.mac);
         if (mft->e[i].u.net_basic.mtu == 0)
-            mtu->e[i].u.net_basic.mtu = 1500;
+            mft->e[i].u.net_basic.mtu = 1500;
 
         int rc;
         struct epoll_event ev;
@@ -171,7 +171,7 @@ static int setup(struct spt *spt, struct mft *mft)
 static char *usage(void)
 {
     return "--net:NAME=IFACE | @NN (attach tap at IFACE or at fd @NN as network NAME)\n"
-        "  [ --net-mac:NAME=HWADDR ] (set HWADDR for network NAME)\n";
+        "  [ --net-mac:NAME=HWADDR ] (set HWADDR for network NAME)\n"
         "  [ --net-mtu:NAME=MTU ] (set MTU for network NAME)";
 }
 
